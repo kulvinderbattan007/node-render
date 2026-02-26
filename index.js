@@ -5,6 +5,8 @@ import fs from "fs";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import TestMessage from "./models/TestMessage.js";
+// import axios from "axios";
+import Shop from "./models/Shop.js";
 
 dotenv.config(); // ✅ Load env FIRST
 
@@ -52,63 +54,62 @@ app.get("/auth", (req, res) => {
 /* -----------------------------
    STEP 2 → GET TOKEN + SAVE FILE
 ------------------------------*/
-// app.get("/auth/callback", async (req, res) => {
-//   const { shop, code } = req.query;
+app.get("/auth/callback", async (req, res) => {
+  const { shop, code } = req.query;
 
-//   if (!shop || !code) return res.send("Missing shop or code");
+  if (!shop || !code) {
+    return res.status(400).send("Missing shop or code");
+  }
 
-//   try {
-//     const response = await axios.post(
-//       `https://${shop}/admin/oauth/access_token`,
-//       {
-//         client_id: API_KEY,
-//         client_secret: API_SECRET,
-//         code,
-//       }
-//     );
+  try {
+    /* 🔐 Get Access Token From Shopify */
+    const response = await axios.post(
+      `https://${shop}/admin/oauth/access_token`,
+      {
+        client_id: process.env.SHOPIFY_API_KEY,
+        client_secret: process.env.SHOPIFY_API_SECRET,
+        code,
+      }
+    );
 
-//     const accessToken = response.data.access_token;
+    const accessToken = response.data.access_token;
 
-//     /* ---------- SAVE TOKEN IN FILE ---------- */
-//     const file = "tokens.json";
-//     let data = {};
+    /* 💾 Save or Update Shop in MongoDB */
+    await Shop.findOneAndUpdate(
+      { shop },                     // find by shop
+      { accessToken },              // update token
+      { upsert: true, new: true }   // create if not exists
+    );
 
-//     if (fs.existsSync(file)) {
-//       data = JSON.parse(fs.readFileSync(file, "utf8"));
-//     }
+    console.log("✅ Token saved for:", shop);
 
-//     data[shop] = accessToken;
+    res.send("✅ App installed & token saved in MongoDB!");
 
-//     fs.writeFileSync(file, JSON.stringify(data, null, 2));
-
-//     console.log("✅ Token saved for:", shop);
-
-//     res.send("✅ App installed and token saved!");
-//   } catch (err) {
-//     console.error(err.response?.data || err.message);
-//     res.send("Error getting token");
-//   }
-// });
+  } catch (err) {
+    console.error("OAuth Error:", err.response?.data || err.message);
+    res.status(500).send("Error getting access token");
+  }
+});
 
 
 /* 👉 ROUTE */
-app.get("/auth/callback", async (req, res) => {
-  try {
+// app.get("/auth/callback", async (req, res) => {
+//   try {
 
-    const message = new TestMessage({
-      text: "This is a testing message deplouyy"
-    });
+//     const message = new TestMessage({
+//       text: "This is a testing message deplouyy"
+//     });
 
-    await message.save();
+//     await message.save();
 
-    console.log("✅ Message saved");
-    res.send("✅ Message saved in MongoDB!");
+//     console.log("✅ Message saved");
+//     res.send("✅ Message saved in MongoDB!");
 
-  } catch (err) {
-    console.error(err);
-    res.send("❌ Error saving message");
-  }
-});
+//   } catch (err) {
+//     console.error(err);
+//     res.send("❌ Error saving message");
+//   }
+// });
 
 /* ----------------------------- */
 
