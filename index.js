@@ -46,43 +46,67 @@ app.get("/auth", (req, res) => {
 /* -----------------------------
    STEP 2 → GET TOKEN + SAVE FILE
 ------------------------------*/
-app.get("/auth/callback", async (req, res) => {
-  const { shop, code } = req.query;
+// app.get("/auth/callback", async (req, res) => {
+//   const { shop, code } = req.query;
 
-  if (!shop || !code) return res.send("Missing shop or code");
+//   if (!shop || !code) return res.send("Missing shop or code");
+
+//   try {
+//     const response = await axios.post(
+//       `https://${shop}/admin/oauth/access_token`,
+//       {
+//         client_id: API_KEY,
+//         client_secret: API_SECRET,
+//         code,
+//       }
+//     );
+
+//     const accessToken = response.data.access_token;
+
+//     /* ---------- SAVE TOKEN IN FILE ---------- */
+//     const file = "tokens.json";
+//     let data = {};
+
+//     if (fs.existsSync(file)) {
+//       data = JSON.parse(fs.readFileSync(file, "utf8"));
+//     }
+
+//     data[shop] = accessToken;
+
+//     fs.writeFileSync(file, JSON.stringify(data, null, 2));
+
+//     console.log("✅ Token saved for:", shop);
+
+//     res.send("✅ App installed and token saved!");
+//   } catch (err) {
+//     console.error(err.response?.data || err.message);
+//     res.send("Error getting token");
+//   }
+// });
+
+
+app.get("/auth/callback", async (req, res) => {
 
   try {
-    const response = await axios.post(
-      `https://${shop}/admin/oauth/access_token`,
-      {
-        client_id: API_KEY,
-        client_secret: API_SECRET,
-        code,
-      }
-    );
 
-    const accessToken = response.data.access_token;
-
-    /* ---------- SAVE TOKEN IN FILE ---------- */
     const file = "tokens.json";
-    let data = {};
 
-    if (fs.existsSync(file)) {
-      data = JSON.parse(fs.readFileSync(file, "utf8"));
-    }
+    /* 👉 ONLY TEST MESSAGE */
+    const message = {
+      test: "This is a testing message"
+    };
 
-    data[shop] = accessToken;
+    fs.writeFileSync(file, JSON.stringify(message, null, 2));
 
-    fs.writeFileSync(file, JSON.stringify(data, null, 2));
+    console.log("✅ Test message saved!");
 
-    console.log("✅ Token saved for:", shop);
-
-    res.send("✅ App installed and token saved!");
+    res.send("✅ Test message saved!");
   } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.send("Error getting token");
+    console.error(err.message);
+    res.send("Error saving test message");
   }
 });
+
 
 /* ----------------------------- */
 
