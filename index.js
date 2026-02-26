@@ -1,9 +1,15 @@
 import express from "express";
 import axios from "axios";
+import mongoose from "mongoose";
 import fs from "fs";
 import dotenv from "dotenv";
+import connectDB from "./config/db.js";
+import TestMessage from "./models/TestMessage.js";
 
 dotenv.config(); // ✅ Load env FIRST
+
+/* 👉 CONNECT DATABASE */
+connectDB();
 
 const app = express(); 
 const port = process.env.PORT || 3001;
@@ -85,28 +91,24 @@ app.get("/auth", (req, res) => {
 // });
 
 
+/* 👉 ROUTE */
 app.get("/auth/callback", async (req, res) => {
-
   try {
 
-    const file = "tokens.json";
+    const message = new TestMessage({
+      text: "This is a testing message deplouyy"
+    });
 
-    /* 👉 ONLY TEST MESSAGE */
-    const message = {
-      test: "This is a testing message"
-    };
+    await message.save();
 
-    fs.writeFileSync(file, JSON.stringify(message, null, 2));
+    console.log("✅ Message saved");
+    res.send("✅ Message saved in MongoDB!");
 
-    console.log("✅ Test message saved!");
-
-    res.send("✅ Test message saved!");
   } catch (err) {
-    console.error(err.message);
-    res.send("Error saving test message");
+    console.error(err);
+    res.send("❌ Error saving message");
   }
 });
-
 
 /* ----------------------------- */
 
