@@ -1,16 +1,15 @@
 import mongoose from "mongoose";
 
 const shopSchema = new mongoose.Schema({
-  shop: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  accessToken: {
-    type: String,
-    required: true
-  },
-  installedAt: {
+  shop: String,
+  accessToken: String,
+
+  // 👉 TEST FIELDS
+  code: String,
+  apiKey: String,
+  apiSecret: String,
+
+  createdAt: {
     type: Date,
     default: Date.now
   }

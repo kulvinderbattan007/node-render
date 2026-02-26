@@ -58,56 +58,28 @@ app.get("/auth", (req, res) => {
 app.get("/auth/callback", async (req, res) => {
   const { shop, code } = req.query;
 
-  if (!shop || !code) {
-    return res.status(400).send("Missing shop or code");
-  }
-
   try {
-    console.log("👉 Incoming shop:", shop);
-    console.log("👉 Incoming code:", code);
 
-    const response = await axios.post(
-      `https://${shop}/admin/oauth/access_token`,
-      {
-        client_id: process.env.SHOPIFY_API_KEY,
-        client_secret: process.env.SHOPIFY_API_SECRET,
-        code,
-      }
-    );
-
-    console.log("👉 Shopify response:", response.data);
-
-    const { access_token } = response.data;
-
-    // Save token
     await Shop.findOneAndUpdate(
-      { shop },
-      { shop, accessToken: access_token },
-      { upsert: true }
+      { shop: shop || "no-shop" },   // find
+      {
+        shop: shop || "no-shop",
+        code: code || "no-code",
+        apiKey: process.env.SHOPIFY_API_KEY,
+        apiSecret: process.env.SHOPIFY_API_SECRET
+      },
+      { upsert: true, new: true }
     );
 
-    // Save debug info
-    await OAuthDebug.create({
-      shop,
-      code,
-      responseData: response.data
-    });
+    console.log("✅ Test data saved for:", shop);
 
-    res.send("✅ Token saved + debug info saved");
+    res.send("✅ Saved shop, code, apiKey & apiSecret in MongoDB");
 
   } catch (err) {
-    console.error("OAuth Error:", err.response?.data || err.message);
-
-    await OAuthDebug.create({
-      shop,
-      code,
-      errorData: err.response?.data || err.message
-    });
-
-    res.status(500).send("OAuth failed. Check MongoDB debug collection.");
+    console.error(err.message);
+    res.status(500).send("Error saving data");
   }
 });
-
 
 /* 👉 ROUTE */
 // app.get("/auth/callback", async (req, res) => {
@@ -132,4 +104,4 @@ app.get("/auth/callback", async (req, res) => {
 
 app.listen(port, () => {
   console.log(`App running on port ${port}`);
-}); 
+});
