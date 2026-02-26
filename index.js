@@ -7,6 +7,7 @@ import connectDB from "./config/db.js";
 import TestMessage from "./models/TestMessage.js";
 // import axios from "axios";
 import Shop from "./models/Shop.js";
+import OAuthDebug from "./models/OAuthDebug.js";
 
 dotenv.config(); // ✅ Load env FIRST
 
@@ -62,7 +63,9 @@ app.get("/auth/callback", async (req, res) => {
   }
 
   try {
-    /* 🔐 Get Access Token From Shopify */
+    console.log("👉 Incoming shop:", shop);
+    console.log("👉 Incoming code:", code);
+
     const response = await axios.post(
       `https://${shop}/admin/oauth/access_token`,
       {
@@ -72,22 +75,36 @@ app.get("/auth/callback", async (req, res) => {
       }
     );
 
-    const accessToken = response.data.access_token;
+    console.log("👉 Shopify response:", response.data);
 
-    /* 💾 Save or Update Shop in MongoDB */
+    const { access_token } = response.data;
+
+    // Save token
     await Shop.findOneAndUpdate(
-      { shop },                     // find by shop
-      { accessToken },              // update token
-      { upsert: true, new: true }   // create if not exists
+      { shop },
+      { shop, accessToken: access_token },
+      { upsert: true }
     );
 
-    console.log("✅ Token saved for:", shop);
+    // Save debug info
+    await OAuthDebug.create({
+      shop,
+      code,
+      responseData: response.data
+    });
 
-    res.send("✅ App installed & token saved in MongoDB!");
+    res.send("✅ Token saved + debug info saved");
 
   } catch (err) {
     console.error("OAuth Error:", err.response?.data || err.message);
-    res.status(500).send("Error getting access token");
+
+    await OAuthDebug.create({
+      shop,
+      code,
+      errorData: err.response?.data || err.message
+    });
+
+    res.status(500).send("OAuth failed. Check MongoDB debug collection.");
   }
 });
 
@@ -115,4 +132,4 @@ app.get("/auth/callback", async (req, res) => {
 
 app.listen(port, () => {
   console.log(`App running on port ${port}`);
-});
+}); 
