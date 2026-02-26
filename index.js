@@ -55,31 +55,79 @@ app.get("/auth", (req, res) => {
 /* -----------------------------
    STEP 2 → GET TOKEN + SAVE FILE
 ------------------------------*/
+// app.get("/auth/callback", async (req, res) => {
+//   const { shop, code } = req.query;
+
+//   try {
+
+//     await Shop.findOneAndUpdate(
+//       { shop: shop || "no-shop" },   // find
+//       {
+//         shop: shop || "no-shop",
+//         code: code || "no-code",
+//         apiKey: process.env.SHOPIFY_API_KEY,
+//         apiSecret: process.env.SHOPIFY_API_SECRET
+//       },
+//       { upsert: true, new: true }
+//     );
+
+//     console.log("✅ Test data saved for:", shop);
+
+//     res.send("✅ Saved shop, code, apiKey & apiSecret in MongoDB");
+
+//   } catch (err) {
+//     console.error(err.message);
+//     res.status(500).send("Error saving data");
+//   }
+// });
+
+
 app.get("/auth/callback", async (req, res) => {
   const { shop, code } = req.query;
 
-  try {
+  if (!shop || !code) {
+    return res.status(400).send("Missing shop or code");
+  }
 
-    await Shop.findOneAndUpdate(
-      { shop: shop || "no-shop" },   // find
+  try {
+    console.log("👉 Shop:", shop);
+    console.log("👉 Code:", code);
+
+    /* 🔐 STEP 1 — Get Access Token from Shopify */
+    const tokenRes = await axios.post(
+      `https://${shop}/admin/oauth/access_token`,
       {
-        shop: shop || "no-shop",
-        code: code || "no-code",
+        client_id: process.env.SHOPIFY_API_KEY,
+        client_secret: process.env.SHOPIFY_API_SECRET,
+        code,
+      }
+    );
+
+    const accessToken = tokenRes.data.access_token;
+
+    console.log("✅ Access Token:", accessToken);
+
+    /* 💾 STEP 2 — Save EVERYTHING in same Shop doc */
+    await Shop.findOneAndUpdate(
+      { shop },
+      {
+        shop,
+        code,
         apiKey: process.env.SHOPIFY_API_KEY,
-        apiSecret: process.env.SHOPIFY_API_SECRET
+        apiSecret: process.env.SHOPIFY_API_SECRET,
+        accessToken
       },
       { upsert: true, new: true }
     );
 
-    console.log("✅ Test data saved for:", shop);
-
-    res.send("✅ Saved shop, code, apiKey & apiSecret in MongoDB");
+    res.send("✅ Access Token saved in MongoDB!");
 
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Error saving data");
+    console.error("OAuth Error:", err.response?.data || err.message);
+    res.status(500).send("❌ Error getting access token");
   }
 });
+
 
 /* 👉 ROUTE */
 // app.get("/auth/callback", async (req, res) => {
