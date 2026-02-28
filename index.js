@@ -8,6 +8,8 @@ import TestMessage from "./models/TestMessage.js";
 // import axios from "axios";
 import Shop from "./models/Shop.js";
 import OAuthDebug from "./models/OAuthDebug.js";
+import cors from "cors";
+
 
 dotenv.config(); // ✅ Load env FIRST
 
@@ -16,7 +18,9 @@ connectDB();
 
 const app = express(); 
 const port = process.env.PORT || 3001;
-
+app.use(cors({
+  origin: "*",   // for testing only
+}));
 /* -----------------------------
    ENV VARIABLES
 ------------------------------*/
@@ -129,26 +133,39 @@ app.get("/auth/callback", async (req, res) => {
 });
 
 
-/* 👉 ROUTE */
-// app.get("/auth/callback", async (req, res) => {
-//   try {
 
-//     const message = new TestMessage({
-//       text: "This is a testing message deplouyy"
-//     });
-
-//     await message.save();
-
-//     console.log("✅ Message saved");
-//     res.send("✅ Message saved in MongoDB!");
-
-//   } catch (err) {
-//     console.error(err);
-//     res.send("❌ Error saving message");
-//   }
-// });
 
 /* ----------------------------- */
+
+app.get("/get-products", async (req, res) => {
+  try {
+    // 👉 1. Get shop from DB directly
+    const shopData = await Shop.findOne({
+      shop: "checkou-extension.myshopify.com"
+    });
+
+    if (!shopData || !shopData.accessToken) {
+      return res.send("Access token not found in DB");
+    }
+
+    // 👉 2. Call Shopify API
+    const response = await axios.get(
+      `https://${shopData.shop}/admin/api/2024-01/products.json`,
+      {
+        headers: {
+          "X-Shopify-Access-Token": shopData.accessToken,
+        },
+      }
+    );
+
+    // 👉 3. Send products
+    res.json(response.data.products);
+
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+    res.status(500).send("Error fetching products");
+  }
+});
 
 app.listen(port, () => {
   console.log(`App running on port ${port}`);
